@@ -1,5 +1,4 @@
 import FeatureCard from "@/components/FeatureCard";
-import { title } from "process";
 
 export default function HomePage() {
   return (
