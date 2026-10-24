@@ -1,5 +1,3 @@
-import FeatureCard from "@/components/FeatureCard";
-
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-16">
@@ -67,9 +65,6 @@ export default function HomePage() {
             Gere diferentes centros de formação numa plataforma.
           </p>
         </article>
-
-        <FeatureCard title={"Certificados"} description={"Cria um quarto cartão chamado Certificados e adiciona uma descrição."} />
-        
       </section>
     </main>
   );
