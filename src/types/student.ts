@@ -1,6 +1,9 @@
-export interface Student {
+export type StudentStatus = "ACTIVE" | "INACTIVE";
+
+export type Student = {
   id: string;
-  fullName: string;
-  email: string;
-  status: "ACTIVE" | "INACTIVE";
-}
+  name: string;
+  phone: string;
+  course: string;
+  status: StudentStatus;
+};

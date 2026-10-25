@@ -1,198 +1,207 @@
 
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import StudentStatusBadge from "@/components/students/student-status-badge";
+import type { Student, } from "@/types/student";
 
-type Formando = {
-  id: number;
-  nome: string;
-  telefone: string;
-  curso: string;
-};
-
-const cursosDisponiveis = [
-  "Informática",
-  "Programação Web",
-  "Contabilidade",
+const initialStudents: Student[] = [
+  {
+    id: "std-004",
+    name: "Paulo António",
+    phone: "923000004",
+    course: "Contabilidade",
+    status: "ACTIVE",
+  },
+  {
+    id: "std-001",
+    name: "Ana Manuel",
+    phone: "923000001",
+    course: "Informática",
+    status: "ACTIVE",
+  },
+  {
+    id: "std-002",
+    name: "João Pedro",
+    phone: "923000002",
+    course: "Programação Web",
+    status: "ACTIVE",
+  },
+  {
+    id: "std-003",
+    name: "Maria José",
+    phone: "923000003",
+    course: "Informática",
+    status: "INACTIVE",
+  },  
 ];
 
 export default function FormandosPage() {
-  const [nome, setNome] = useState("");
-  const [telefone, setTelefone] = useState("");
-  const [curso, setCurso] = useState(cursosDisponiveis[0]);
-  const [pesquisa, setPesquisa] = useState("");
-  const [erro, setErro] = useState("");
+  const [students] = useState<Student[]>(initialStudents);
+  const [search, setSearch] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState("Todos");
+  const [selectedStatus, setSelectedStatus] = useState("Todos");
 
-  const [formandos, setFormandos] = useState<Formando[]>([]);
-
-  function adicionarFormando(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!nome.trim() || !telefone.trim() || !curso) {
-      setErro("Preenche todos os campos obrigatórios.");
-      return;
-    }
-
-    const novoFormando: Formando = {
-      id: Date.now(),
-      nome: nome.trim(),
-      telefone: telefone.trim(),
-      curso,
-    };
-
-    setFormandos((atuais) => [...atuais, novoFormando]);
-
-    setNome("");
-    setTelefone("");
-    setCurso(cursosDisponiveis[0]);
-    setErro("");
-  }
-
-  function excluirFormando(id: number) {
-    const confirmar = window.confirm(
-      "Tens a certeza de que pretendes excluir este formando?"
-    );
-
-    if (!confirmar) return;
-
-    setFormandos((atuais) =>
-      atuais.filter((formando) => formando.id !== id)
-    );
-  }
-
-  const formandosFiltrados = formandos.filter((formando) =>
-    formando.nome.toLowerCase().includes(pesquisa.toLowerCase())
+  const courses = useMemo(
+    () => [...new Set(students.map((student) => student.course))],
+    [students]
   );
+
+  const filteredStudents = useMemo(() => {
+    const term = search.trim().toLowerCase();
+
+    return students.filter((student) => {
+      const matchesSearch =
+        student.name.toLowerCase().includes(term) ||
+        student.phone.includes(term);
+
+      const matchesCourse =
+        selectedCourse === "Todos" ||
+        student.course === selectedCourse;
+
+      const matchesStatus =
+        selectedStatus === "Todos" ||
+        student.status === selectedStatus;
+
+      return matchesSearch && matchesCourse && matchesStatus;
+    });
+  }, [students, search, selectedCourse, selectedStatus]);
+
+  const activeCount = students.filter(
+    (student) => student.status === "ACTIVE"
+  ).length;
+
+  function resetFilters() {
+    setSearch("");
+    setSelectedCourse("Todos");
+    setSelectedStatus("Todos");
+  }
 
   return (
     <main className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-black">Formandos</h1>
+        <h1 className="text-2xl font-bold text-slate-900">
+          Formandos
+        </h1>
         <p className="mt-1 text-slate-500">
-          Regista e consulta os formandos do centro de formação.
+          Consulta e gestão dos formandos do centro.
         </p>
       </header>
 
-      <section className="rounded-xl border bg-white p-5">
-        <h2 className="mb-4 text-lg font-semibold text-black">
-          Registar formando
-        </h2>
+      <section className="grid gap-4 sm:grid-cols-2">
+        <article className="rounded-xl border bg-white p-5">
+          <p className="text-sm text-slate-500">Total de formandos</p>
+          <p className="mt-2 text-3xl font-bold  text-slate-500">{students.length}</p>
+        </article>
 
-        <form onSubmit={adicionarFormando} className="space-y-4">
+        <article className="rounded-xl border bg-white p-5">
+          <p className="text-sm text-slate-500">Formandos ativos</p>
+          <p className="mt-2 text-3xl font-bold  text-slate-500">{activeCount}</p>
+        </article>
+      </section>
+
+      <section className="space-y-4 rounded-xl border bg-white p-5">
+        <h2 className="text-lg font-semibold  text-black">Pesquisar e filtrar</h2>
+
+        <div className="grid gap-4 md:grid-cols-3">
           <div>
-            <label htmlFor="nome" className="mb-1 block text-sm font-medium text-black">
-              Nome completo
+            <label htmlFor="search" className="mb-1 block text-sm  text-slate-500">
+              Nome ou telefone
             </label>
             <input
-              id="nome"
-              value={nome}
-              onChange={(event) => setNome(event.target.value)}
-              placeholder="Nome do formando"
-              className="w-full rounded-lg border p-3 placeholder:text-slate-400"
-              required
+              id="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Pesquisar formando..."
+              className="w-full rounded-lg border p-3 placeholder:text-slate-500"
             />
           </div>
 
           <div>
-            <label htmlFor="telefone" className="mb-1 block text-sm font-medium text-black">
-              Telefone
-            </label>
-            <input
-              id="telefone"
-              type="tel"
-              value={telefone}
-              onChange={(event) => setTelefone(event.target.value)}
-              placeholder="Ex.: 923000000"
-              className="w-full rounded-lg border p-3 placeholder:text-slate-400"
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="curso" className="mb-1 block text-sm font-medium text-black">
+            <label htmlFor="course" className="mb-1 block text-sm  text-slate-500">
               Curso
             </label>
             <select
-              id="curso"
-              value={curso}
-              onChange={(event) => setCurso(event.target.value)}
-              className="w-full rounded-lg border p-3 text-slate-400"
+              id="course"
+              value={selectedCourse}
+              onChange={(event) => setSelectedCourse(event.target.value)}
+              className="w-full rounded-lg border p-3 placeholder: text-slate-500"
             >
-              {cursosDisponiveis.map((opcao) => (
-                <option key={opcao} value={opcao}>
-                  {opcao}
+              <option value="Todos">Todos os cursos</option>
+              {courses.map((course) => (
+                <option key={course} value={course}>
+                  {course}
                 </option>
               ))}
             </select>
           </div>
 
-          {erro && (
-            <p role="alert" className="text-sm text-red-600">
-              {erro}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            className="rounded-lg bg-blue-700 px-5 py-3 font-medium text-white hover:bg-blue-800"
-          >
-            Adicionar formando
-          </button>
-        </form>
-      </section>
-
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold text-black">
-            Lista de formandos ({formandos.length})
-          </h2>
-
           <div>
-            <p className="mt-1 text-slate-500">
-              Contagem por curso.
-            </p>
-            {cursosDisponiveis.map((opcao) => (
-            <label key={opcao}  htmlFor="nome" className="mb-1 block text-sm font-medium text-black">
-              {opcao} :: ({formandos.filter((formando) => formando.curso === opcao).length})
-            </label> 
-             ))}
+            <label htmlFor="status" className="mb-1 block text-sm  text-slate-500">
+              Estado
+            </label>
+            <select
+              id="status"
+              value={selectedStatus}
+              onChange={(event) => setSelectedStatus(event.target.value)}
+              className="w-full rounded-lg border p-3 placeholder: text-slate-500"
+            >
+              <option value="Todos">Todos os estados</option>
+              <option value="ACTIVE">Ativo</option>
+              <option value="INACTIVE">Inativo</option>
+            </select>
           </div>
-
-          <input
-            value={pesquisa}
-            onChange={(event) => setPesquisa(event.target.value)}
-            placeholder="Pesquisar por nome..."
-            aria-label="Pesquisar formandos por nome"
-            className="mt-3 w-full rounded-lg border bg-white p-3 placeholder:text-slate-400"
-          />
         </div>
 
-        {formandosFiltrados.length === 0 ? (
-          <p className="rounded-xl border border-dashed p-6 text-center text-slate-500">
-            {formandos.length === 0
-              ? "Ainda não existem formandos registados."
-              : "Nenhum formando encontrado para essa pesquisa."}
+        <button
+          type="button"
+          onClick={resetFilters}
+          className="rounded-lg border px-4 py-2 text-sm hover:bg-slate-50  text-slate-500"
+        >
+          Limpar filtros
+        </button>
+      </section>
+
+      <section className="overflow-hidden rounded-xl border bg-white">
+        <div className="border-b p-5">
+          <h2 className="font-semibold text-black">Lista de formandos</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {filteredStudents.length} resultado(s) de {students.length}
           </p>
-        ) : (
-          <div className="space-y-3">
-            {formandosFiltrados.map((formando) => (
-              <article
-                key={formando.id}
-                className="rounded-xl border bg-white p-4"
-              >
-                <h3 className="font-semibold text-black">{formando.nome}</h3>
-                <p className="text-sm text-slate-500">
-                  Telefone: {formando.telefone}
-                </p>
-                <p className="text-sm text-slate-500">
-                  Curso: {formando.curso}
-                </p>
-                <button onClick={() => excluirFormando(formando.id)} key={formando.id} className="rounded-lg bg-blue-700 px-5 py-3 font-medium text-white hover:bg-blue-800">
-                  Excluir
-                </button>
-              </article>
-            ))}
-          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 text-slate-600">
+              <tr>
+                <th className="px-5 py-3 font-medium">Nome</th>
+                <th className="px-5 py-3 font-medium">Telefone</th>
+                <th className="px-5 py-3 font-medium">Curso</th>
+                <th className="px-5 py-3 font-medium">Estado</th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y">
+              {filteredStudents.map((student) => (
+                <tr key={student.id} className="hover:bg-slate-50">
+                  <td className="px-5 py-4 font-medium  text-slate-500">
+                    {student.name}
+                  </td>
+                  <td className="px-5 py-4  text-slate-500">{student.phone}</td>
+                  <td className="px-5 py-4  text-slate-500">{student.course}</td>
+                  <td className="px-5 py-4  text-slate-500">
+                    <StudentStatusBadge status={student.status} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {filteredStudents.length === 0 && (
+          <p className="p-8 text-center text-slate-500">
+            Nenhum formando encontrado. Experimenta alterar os filtros.
+          </p>
         )}
       </section>
     </main>
