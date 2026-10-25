@@ -1,0 +1,45 @@
+
+[
+  {
+    "uuid": "formando-001",
+    "name": "João Manuel",
+    "phone": "+244 923 111 222",
+    "course": "Informática",
+    "status": "ACTIVE"
+  },
+  {
+    "uuid": "formando-002",
+    "name": "Maria José",
+    "phone": "+244 924 333 444",
+    "course": "Contabilidade",
+    "status": "ACTIVE"
+  },
+  {
+    "uuid": "formando-003",
+    "name": "Pedro António",
+    "phone": "+244 925 555 666",
+    "course": "Informática",
+    "status": "INACTIVE"
+  },
+  {
+    "uuid": "formando-004",
+    "name": "Ana Paula",
+    "phone": "+244 926 777 888",
+    "course": "Recursos Humanos",
+    "status": "ACTIVE"
+  },
+  {
+    "uuid": "formando-005",
+    "name": "Carlos Miguel",
+    "phone": "+244 927 999 000",
+    "course": "Contabilidade",
+    "status": "SUSPENDED"
+  },
+  {
+    "uuid": "formando-006",
+    "name": "Teresa Domingos",
+    "phone": "+244 923 444 555",
+    "course": "Informática",
+    "status": "ACTIVE"
+  }
+]

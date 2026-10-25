@@ -1,9 +1,10 @@
-export type StudentStatus = "ACTIVE" | "INACTIVE";
 
-export type Student = {
-  id: string;
+export type StudentStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
+
+export interface Student {
+  uuid: string;
   name: string;
   phone: string;
   course: string;
   status: StudentStatus;
-};
+}

@@ -1,52 +1,62 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import StudentStatusBadge from "@/components/students/student-status-badge";
-import type { Student, } from "@/types/student";
-
-const initialStudents: Student[] = [
-  {
-    id: "std-004",
-    name: "Paulo António",
-    phone: "923000004",
-    course: "Contabilidade",
-    status: "ACTIVE",
-  },
-  {
-    id: "std-001",
-    name: "Ana Manuel",
-    phone: "923000001",
-    course: "Informática",
-    status: "ACTIVE",
-  },
-  {
-    id: "std-002",
-    name: "João Pedro",
-    phone: "923000002",
-    course: "Programação Web",
-    status: "ACTIVE",
-  },
-  {
-    id: "std-003",
-    name: "Maria José",
-    phone: "923000003",
-    course: "Informática",
-    status: "INACTIVE",
-  },  
-];
+import type { Student } from "@/types/student";
+import { getMockStudents } from "@/mocks/students/students-api";
 
 export default function FormandosPage() {
-  const [students] = useState<Student[]>(initialStudents);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
+
   const [search, setSearch] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("Todos");
   const [selectedStatus, setSelectedStatus] = useState("Todos");
 
+  // Carregar os formandos através da API fictícia.
+  const loadStudents = useCallback(async (signal: AbortSignal) => {
+    try {
+      const data = await getMockStudents(signal);
+
+      if (!signal.aborted) {
+        setStudents(data);
+      }
+    } catch (err) {
+      if (signal.aborted) return;
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Ocorreu um erro ao carregar os formandos."
+      );
+    } finally {
+      if (!signal.aborted) {
+        setLoading(false);
+      }
+    }
+  }, []);
+
+  // Executar o carregamento inicial e quando o utilizador tentar novamente.
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void loadStudents(controller.signal);
+
+    return () => {
+      controller.abort();
+    };
+  }, [loadStudents, retry]);
+
+  // Obter os cursos existentes sem duplicados.
   const courses = useMemo(
     () => [...new Set(students.map((student) => student.course))],
     [students]
   );
 
+  // Aplicar pesquisa, filtro por curso e filtro por estado.
   const filteredStudents = useMemo(() => {
     const term = search.trim().toLowerCase();
 
@@ -67,9 +77,16 @@ export default function FormandosPage() {
     });
   }, [students, search, selectedCourse, selectedStatus]);
 
-  const activeCount = students.filter(
-    (student) => student.status === "ACTIVE"
-  ).length;
+  // Calcular os indicadores.
+  const activeCount = useMemo(
+    () => students.filter((student) => student.status === "ACTIVE").length,
+    [students]
+  );
+
+  const inactiveCount = useMemo(
+    () => students.filter((student) => student.status === "INACTIVE").length,
+    [students]
+  );
 
   function resetFilters() {
     setSearch("");
@@ -77,59 +94,110 @@ export default function FormandosPage() {
     setSelectedStatus("Todos");
   }
 
+  function handleRetry() {
+    setError("");
+    setLoading(true);
+    setRetry((value) => value + 1);
+  }
+
   return (
-    <main className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold text-slate-900">
-          Formandos
-        </h1>
-        <p className="mt-1 text-slate-500">
-          Consulta e gestão dos formandos do centro.
-        </p>
-      </header>
+    <main className="space-y-6 p-6">
+      {/* Cabeçalho */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+            Formandos
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Consulta e gestão dos formandos do centro de formação.
+          </p>
+        </div>
 
-      <section className="grid gap-4 sm:grid-cols-2">
-        <article className="rounded-xl border bg-white p-5">
-          <p className="text-sm text-slate-500">Total de formandos</p>
-          <p className="mt-2 text-3xl font-bold  text-slate-500">{students.length}</p>
-        </article>
+        <button
+          type="button"
+          onClick={handleRetry}
+          disabled={loading}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {loading ? "A carregar..." : "Atualizar lista"}
+        </button>
+      </div>
 
-        <article className="rounded-xl border bg-white p-5">
-          <p className="text-sm text-slate-500">Formandos ativos</p>
-          <p className="mt-2 text-3xl font-bold  text-slate-500">{activeCount}</p>
-        </article>
+      {/* Indicadores */}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-medium text-gray-500">
+            Total de formandos
+          </p>
+          <p className="mt-2 text-3xl font-bold text-gray-900">
+            {students.length}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-medium text-gray-500">
+            Formandos ativos
+          </p>
+          <p className="mt-2 text-3xl font-bold text-green-600">
+            {activeCount}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-medium text-gray-500">
+            Formandos inativos
+          </p>
+          <p className="mt-2 text-3xl font-bold text-gray-600">
+            {inactiveCount}
+          </p>
+        </div>
       </section>
 
-      <section className="space-y-4 rounded-xl border bg-white p-5">
-        <h2 className="text-lg font-semibold  text-black">Pesquisar e filtrar</h2>
+      {/* Pesquisa e filtros */}
+      <section className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div>
+          <h2 className="font-semibold text-gray-900">
+            Pesquisar e filtrar
+          </h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Pesquisa por nome ou telefone e filtra por curso e estado.
+          </p>
+        </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div>
-            <label htmlFor="search" className="mb-1 block text-sm  text-slate-500">
+            <label
+              htmlFor="student-search"
+              className="mb-1.5 block text-sm font-medium text-gray-700"
+            >
               Nome ou telefone
             </label>
             <input
-              id="search"
+              id="student-search"
+              type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Pesquisar formando..."
-              className="w-full rounded-lg border p-3 placeholder:text-slate-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 placeholder:text-gray-500"
             />
           </div>
 
           <div>
-            <label htmlFor="course" className="mb-1 block text-sm  text-slate-500">
+            <label
+              htmlFor="course-filter"
+              className="mb-1.5 block text-sm font-medium text-gray-700"
+            >
               Curso
             </label>
             <select
-              id="course"
+              id="course-filter"
               value={selectedCourse}
               onChange={(event) => setSelectedCourse(event.target.value)}
-              className="w-full rounded-lg border p-3 placeholder: text-slate-500"
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-500"
             >
               <option value="Todos">Todos os cursos</option>
               {courses.map((course) => (
-                <option key={course} value={course}>
+                <option key={course} value={course} className="text-gray-500">
                   {course}
                 </option>
               ))}
@@ -137,71 +205,128 @@ export default function FormandosPage() {
           </div>
 
           <div>
-            <label htmlFor="status" className="mb-1 block text-sm  text-slate-500">
+            <label
+              htmlFor="status-filter"
+              className="mb-1.5 block text-sm font-medium text-gray-700"
+            >
               Estado
             </label>
             <select
-              id="status"
+              id="status-filter"
               value={selectedStatus}
               onChange={(event) => setSelectedStatus(event.target.value)}
-              className="w-full rounded-lg border p-3 placeholder: text-slate-500"
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-500"
             >
               <option value="Todos">Todos os estados</option>
               <option value="ACTIVE">Ativo</option>
               <option value="INACTIVE">Inativo</option>
+              <option value="SUSPENDED">Suspenso</option>
             </select>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={resetFilters}
-          className="rounded-lg border px-4 py-2 text-sm hover:bg-slate-50  text-slate-500"
-        >
-          Limpar filtros
-        </button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-gray-500">
+            {filteredStudents.length}{" "}
+            {filteredStudents.length === 1
+              ? "formando encontrado"
+              : "formandos encontrados"}
+          </p>
+
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="self-start text-sm font-medium text-blue-600 hover:text-blue-800 sm:self-auto"
+          >
+            Limpar filtros
+          </button>
+        </div>
       </section>
 
-      <section className="overflow-hidden rounded-xl border bg-white">
-        <div className="border-b p-5">
-          <h2 className="font-semibold text-black">Lista de formandos</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            {filteredStudents.length} resultado(s) de {students.length}
-          </p>
+      {/* Lista de formandos */}
+      <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-200 px-5 py-4">
+          <h2 className="font-semibold text-gray-900">
+            Lista de formandos
+          </h2>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr>
-                <th className="px-5 py-3 font-medium">Nome</th>
-                <th className="px-5 py-3 font-medium">Telefone</th>
-                <th className="px-5 py-3 font-medium">Curso</th>
-                <th className="px-5 py-3 font-medium">Estado</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y">
-              {filteredStudents.map((student) => (
-                <tr key={student.id} className="hover:bg-slate-50">
-                  <td className="px-5 py-4 font-medium  text-slate-500">
-                    {student.name}
-                  </td>
-                  <td className="px-5 py-4  text-slate-500">{student.phone}</td>
-                  <td className="px-5 py-4  text-slate-500">{student.course}</td>
-                  <td className="px-5 py-4  text-slate-500">
-                    <StudentStatusBadge status={student.status} />
-                  </td>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+            <div
+              className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600"
+              role="status"
+              aria-label="A carregar"
+            />
+            <p className="mt-4 text-sm text-gray-500">
+              A carregar os formandos...
+            </p>
+          </div>
+        ) : error ? (
+          <div className="px-6 py-12 text-center">
+            <p className="font-medium text-red-600">
+              Não foi possível carregar os formandos.
+            </p>
+            <p className="mt-2 text-sm text-gray-500">{error}</p>
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        ) : filteredStudents.length === 0 ? (
+          <div className="px-6 py-12 text-center">
+            <p className="font-medium text-gray-900">
+              Nenhum formando encontrado.
+            </p>
+            <p className="mt-2 text-sm text-gray-500">
+              Altera a pesquisa ou os filtros para veres outros resultados.
+            </p>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="mt-4 text-sm font-medium text-blue-600 hover:text-blue-800"
+            >
+              Limpar filtros
+            </button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[650px] text-left text-sm">
+              <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                <tr>
+                  <th className="px-5 py-3 font-medium">Formando</th>
+                  <th className="px-5 py-3 font-medium">Telefone</th>
+                  <th className="px-5 py-3 font-medium">Curso</th>
+                  <th className="px-5 py-3 font-medium">Estado</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
 
-        {filteredStudents.length === 0 && (
-          <p className="p-8 text-center text-slate-500">
-            Nenhum formando encontrado. Experimenta alterar os filtros.
-          </p>
+              <tbody className="divide-y divide-gray-100">
+                {filteredStudents.map((student) => (
+                  <tr
+                    key={student.uuid}
+                    className="transition hover:bg-gray-50"
+                  >
+                    <td className="px-5 py-4 font-medium text-gray-900">
+                      {student.name}
+                    </td>
+                    <td className="px-5 py-4 text-gray-600">
+                      {student.phone || "—"}
+                    </td>
+                    <td className="px-5 py-4 text-gray-600">
+                      {student.course || "—"}
+                    </td>
+                    <td className="px-5 py-4">
+                      <StudentStatusBadge status={student.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </main>
